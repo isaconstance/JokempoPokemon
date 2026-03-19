@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.isa.jokenpo.ui.theme.JokenpoTheme
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,30 +54,100 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun JokenpoScreen(modifier: Modifier = Modifier) {
 
-    var pokemonSelected by remember { mutableStateOf(starters.first()) }
+    val defaultPokemon = Pokemon("-", R.drawable.pokeball_unselected)
+    var pokemonSorting by remember { mutableStateOf(defaultPokemon) }
+    var pokemonSelected by remember { mutableStateOf(defaultPokemon) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(Color.White)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         PokeHeader()
-        AreaBatalha()
         Spacer(modifier = Modifier.weight(1f))
-        PokemonOptionsList("Faça sua jogada de mestre", starters, pokemonSelected) {
+        BattleArena(pokemonSelected, pokemonSorting)
+        Spacer(modifier = Modifier.weight(1f))
+        BattleResult(pokemonSelected, pokemonSorting)
+        Poketext()
+        PokemonOptionsList(starters, pokemonSelected) {
             pokemonSelected = it
+            pokemonSorting = sortearPokemon()
         }
     }
 }
 
+fun sortearPokemon(): Pokemon{
+    val index = Random.nextInt(starters.size)
+    return starters[index]
+}
+
 @Composable
-fun PokeHeader(
-) {
+fun BattleArena(player: Pokemon, computer: Pokemon) {
+    Row (
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ){
+        PokemonCard(player, "Você")
+        PokemonCard(computer, "Computador")
+    }
+}
+
+@Composable
+fun PokemonCard(pokemon: Pokemon, label: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Image(
+            painter = painterResource(pokemon.imageRes),
+            contentDescription = pokemon.name,
+            modifier = Modifier.size(130.dp)
+        )
+        Text(
+            pokemon.name.uppercase(),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(label, fontSize = 18.sp)
+    }
+}
+
+@Composable
+fun BattleResult(pokemonSelected: Pokemon, pokemonSorting: Pokemon) {
+    val resultado = when {
+        pokemonSelected.name == "-" || pokemonSorting.name == "-" -> ""
+        pokemonSelected.name == pokemonSorting.name -> "Empate!"
+        pokemonSelected.name == "Bulbasaur" && pokemonSorting.name == "Squirtle" -> "Você venceu!"
+        pokemonSelected.name == "Charmander" && pokemonSorting.name == "Bulbasaur" -> "Você venceu!"
+        pokemonSelected.name == "Squirtle" && pokemonSorting.name == "Charmander" -> "Você venceu!"
+        else -> "Computador venceu!"
+    }
+
+    Text(
+        text = resultado,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color(0xFFE53935)
+    )
+}
+
+@Composable
+fun Poketext() {
+        Text(
+            text = "Faça sua jogada de mestre",
+            fontSize = 18.sp,
+        )
+}
+
+@Composable
+fun PokeHeader() {
     Image(
-        painter = painterResource(id = R.drawable.logo_pokemon),
+        painter = painterResource(R.drawable.logo_pokemon),
         contentDescription = "Logo Pokemon",
-        modifier = Modifier.size(270.dp)
+        modifier = Modifier.height(100.dp)
     )
 }
 
@@ -83,7 +155,7 @@ fun PokeHeader(
 //val possui um tempo de resposta melhor
 data class Pokemon(
     val name: String,
-    val imageRes: Int = R.drawable.pokeball_unselected,
+    val imageRes: Int
 )
 
 //variavel global
@@ -92,19 +164,6 @@ val starters = listOf(
     Pokemon("Charmander", R.drawable.charmander),
     Pokemon("Squirtle", R.drawable.squirtle)
 )
-
-
-
-@Composable
-fun AreaBatalha(){
-
-    Row {
-        PokemonCard(starters.random())
-        PokemonCard(null)
-    }
-
-}
-
 
 
 @Composable
@@ -125,35 +184,29 @@ fun PokemonOption(
             else painterResource(R.drawable.pokeball_unselected),
             contentDescription = "",
             modifier = Modifier.size(40.dp),
-            colorFilter = if (isSystemInDarkTheme() && !select) ColorFilter.tint(Color.White) else null
+            colorFilter = if (isSystemInDarkTheme() && !select)
+                ColorFilter.tint(Color.White) else null
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Text(pokemon.name, fontSize = 18.sp)
+        Text(pokemon.name)
 
     }
 }
 
 @Composable
 fun PokemonOptionsList(
-    label: String,
     pokemons: List<Pokemon>,
     pokemonSelected: Pokemon,
     onSelected: (Pokemon) -> Unit
 ) {
-    Text(
-        label,
-        fontSize = 15.sp,
-        fontWeight = FontWeight.Bold,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(8.dp)
-    )
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         pokemons.forEach { pokemon ->
             PokemonOption(
                 pokemon,
-                select = pokemon == pokemonSelected
+                pokemon == pokemonSelected
             ) {
                 onSelected(pokemon)
             }
@@ -162,57 +215,11 @@ fun PokemonOptionsList(
     }
 }
 
-@Preview(showBackground = true)
+
+@Preview
 @Composable
 private fun PokemonStarterScreenPreview() {
     JokenpoTheme() {
         JokenpoScreen()
-    }
-}
-
-@Composable
-fun PokemonCard(pokemon: Pokemon?) {
-    if(pokemon == null) {
-        PokeCardItemDefault()
-    } else {
-        PokemonCardItem(pokemon)
-    }
-}
-
-@Composable
-fun PokemonCardItem(
-    pokemon: Pokemon,
-) {
-    Column(
-        modifier = Modifier
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Image(
-            painter = painterResource(pokemon.imageRes),
-            contentDescription = pokemon.name,
-            modifier = Modifier.size(40.dp),
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(pokemon.name, fontSize = 18.sp)
-
-    }
-}
-
-@Composable
-fun PokeCardItemDefault() {
-    Column(
-        modifier = Modifier
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Image(
-            painter = painterResource(R.drawable.pokeball_unselected),
-            contentDescription = "",
-            modifier = Modifier.size(40.dp),
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("-")
-
     }
 }
